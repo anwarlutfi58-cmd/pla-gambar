@@ -28,5 +28,5 @@
     <string name="win_text">Hebat! Kamu menyelesaikan Level %1$d.</string>
     <string name="next_level">Lanjut Level</string>
     <string name="main_menu">Menu Utama</string>
-    <string name="help_text">1. Ketuk kartu untuk membalik.\n2. Cocokkan 2 kartu dengan gambar sama.\n3. Kartu 🔒 tertutup — hilangkan kartu di atasnya dulu.\n4. Selesaikan semua pasangan untuk lanjut level.\n\n💡 Mode ONLINE pakai AI Gemini untuk fakta unik (butuh API Key).\n📴 Mode OFFLINE tidak butuh internet.</string>
+    <string name="help_text">1. Ketuk kartu untuk membalik.\n2. Cocokkan 2 kartu dengan gambar sama.\n3. Kartu 🔒 tertutup — hilangkan kartu di atasnya dulu.\n4. Selesaikan semua pasangan untuk lanjut level.\n5. Level 10+ ada timer — selesaikan sebelum waktu habis!\n\n💡 Mode ONLINE pakai AI Gemini untuk fakta unik (butuh API Key).\n📴 Mode OFFLINE tidak butuh internet.</string>
 </resources>
