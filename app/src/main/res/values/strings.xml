@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PLA Mencocokan Gambar</string>
+    <string name="title">PLA Mencocokan Gambar</string>
+    <string name="tagline">Cocokkan pasangan gambar tersembunyi!</string>
+    <string name="level_unlocked">Level Terbuka: %1$d</string>
+    <string name="play_offline">🎮 Main OFFLINE</string>
+    <string name="play_online">🤖 Main ONLINE (AI)</string>
+    <string name="settings">⚙️ Pengaturan AI</string>
+    <string name="help">❓ Cara Bermain</string>
+    <string name="back">← Kembali</string>
+    <string name="home">🏠 Beranda</string>
+    <string name="prev">Sebelumnya</string>
+    <string name="replay">Ulang</string>
+    <string name="next">Lanjut</string>
+    <string name="level">Level %1$d</string>
+    <string name="level_online">Level %1$d (Online)</string>
+    <string name="api_hint">Isi API Key Gemini (opsional). Kosongkan untuk mode offline.</string>
+    <string name="api1">API Key 1:</string>
+    <string name="api2">API Key 2:</string>
+    <string name="api3">API Key 3:</string>
+    <string name="api4">API Key 4:</string>
+    <string name="save">Simpan Pengaturan</string>
+    <string name="saved">✅ Berhasil disimpan!</string>
+    <string name="understand">Mengerti</string>
+    <string name="pairs_left">Sisa pasangan: %1$d</string>
+    <string name="win_title">🎉 Level Selesai!</string>
+    <string name="win_text">Hebat! Kamu menyelesaikan Level %1$d.</string>
+    <string name="next_level">Lanjut Level</string>
+    <string name="main_menu">Menu Utama</string>
+    <string name="help_text">1. Ketuk kartu untuk membalik.\n2. Cocokkan 2 kartu dengan gambar sama.\n3. Kartu 🔒 tertutup — hilangkan kartu di atasnya dulu.\n4. Selesaikan semua pasangan untuk lanjut level.\n\n💡 Mode ONLINE pakai AI Gemini untuk fakta unik (butuh API Key).\n📴 Mode OFFLINE tidak butuh internet.</string>
+</resources>
