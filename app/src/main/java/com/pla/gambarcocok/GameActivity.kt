@@ -1,29 +1,29 @@
 package com.pla.gambarcocok
 
+import android.animation.ObjectAnimator
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.View
-import android.view.animation.OvershootInterpolator
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import kotlin.math.min
 
 class GameActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
     private lateinit var speech: SpeechHelper
-    private lateinit var sound: SoundHelper
     private lateinit var engine: GameEngine
     private lateinit var boardContainer: FrameLayout
     private lateinit var txtGameTitle: TextView
     private lateinit var txtPairs: TextView
-    private lateinit var aiBox: TextView
     private lateinit var txtTimer: TextView
+    private lateinit var aiBox: TextView
 
     private var mode = "offline"
     private var currentLevel = 1
@@ -33,7 +33,6 @@ class GameActivity : AppCompatActivity() {
 
     private val cardViews = mutableMapOf<String, View>()
 
-    // Timer
     private var timerRunning = false
     private var timeLeft = 0
     private val timerRunnable = object : Runnable {
@@ -55,7 +54,6 @@ class GameActivity : AppCompatActivity() {
         setContentView(R.layout.activity_game)
         prefs = getSharedPreferences("gambarCocok", MODE_PRIVATE)
         speech = SpeechHelper(this)
-        sound = SoundHelper()
 
         mode = intent.getStringExtra("mode") ?: "offline"
         maxLevel = prefs.getInt("maxLevel", 1)
@@ -64,17 +62,13 @@ class GameActivity : AppCompatActivity() {
         boardContainer = findViewById(R.id.boardContainer)
         txtGameTitle = findViewById(R.id.txtGameTitle)
         txtPairs = findViewById(R.id.txtPairs)
-        aiBox = findViewById(R.id.aiBox)
         txtTimer = findViewById(R.id.txtTimer)
+        aiBox = findViewById(R.id.aiBox)
 
-        findViewById<Button>(R.id.btnHome).setOnClickListener {
-            timerRunning = false
-            speech.speak("Kembali ke beranda")
-            finish()
-        }
-        findViewById<Button>(R.id.btnPrev).setOnClickListener { prevLevel() }
+        findViewById<Button>(R.id.btnHome).setOnClickListener { finish() }
+        findViewById<Button>(R.id.btnPrev).setOnClickListener { if (currentLevel > 1) loadLevel(currentLevel - 1) }
         findViewById<Button>(R.id.btnReplay).setOnClickListener { loadLevel(currentLevel) }
-        findViewById<Button>(R.id.btnNext).setOnClickListener { nextLevel() }
+        findViewById<Button>(R.id.btnNext).setOnClickListener { if (currentLevel < maxLevel) loadLevel(currentLevel + 1) }
 
         loadLevel(currentLevel)
     }
@@ -85,18 +79,14 @@ class GameActivity : AppCompatActivity() {
         cardViews.clear()
         boardContainer.removeAllViews()
         aiBox.visibility = View.GONE
-        findViewById<Button>(R.id.btnPrev).isEnabled = level > 1
-        findViewById<Button>(R.id.btnNext).isEnabled = false
 
         val config = LevelConfigs.forLevel(level)
         engine = GameEngine(config)
         engine.generate()
 
-        txtGameTitle.text = if (mode == "online") getString(R.string.level_online, level)
-            else getString(R.string.level, level)
+        txtGameTitle.text = "Level $level"
         updatePairsLeft()
 
-        // Timer
         timerRunning = false
         handler.removeCallbacks(timerRunnable)
         if (config.timeLimitSec > 0) {
@@ -109,8 +99,10 @@ class GameActivity : AppCompatActivity() {
             txtTimer.visibility = View.GONE
         }
 
-        renderBoard(config)
-        speech.speak("Level $level siap. ${engine.totalPairs} pasang gambar.")
+        boardContainer.post {
+            renderBoard(config)
+        }
+        speech.speak("Level $level siap.")
     }
 
     private fun updateTimerUI() {
@@ -126,51 +118,45 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun updatePairsLeft() {
-        txtPairs.text = getString(R.string.pairs_left, engine.remainingPairs())
+        txtPairs.text = "Sisa pasangan: ${engine.remainingPairs()}"
     }
 
     private fun renderBoard(config: LevelConfig) {
-        val w = boardContainer.width
-        val h = boardContainer.height
-        val boardW = if (w > 0) w else resources.displayMetrics.widthPixels - 40
-        val boardH = if (h > 0) h else resources.displayMetrics.heightPixels / 2
+        val boardW = boardContainer.width.toFloat()
+        val boardH = boardContainer.height.toFloat()
+        if (boardW == 0f || boardH == 0f) return
 
-        val padding = 10
-        val cellW = (boardW - padding * 2f) / config.cols
-        val cellH = (boardH - padding * 2f) / config.rows
-        val baseSize = min(cellW, cellH) * 0.92f
+        // Ukuran kartu disesuaikan dengan layar
+        val cardSize = (boardW / 4.5f).coerceAtMost(boardH / 5f).toInt()
 
-        // Kelompokkan kartu per cellKey
-        val byCell = engine.cards.filter { !it.matched }.groupBy { it.cellKey }
+        // Urutkan berdasarkan layer (dari bawah ke atas) agar z-order benar
+        val sortedCards = engine.cards.filter { !it.matched }.sortedBy { it.layer }
 
-        for ((cellKey, group) in byCell) {
-            val col = cellKey % config.cols
-            val row = cellKey / config.cols
+        for (card in sortedCards) {
+            val view = layoutInflater.inflate(R.layout.item_card, boardContainer, false)
+            val tv = view.findViewById<TextView>(R.id.cardText)
+            renderCardFace(tv, card)
 
-            // Urutkan: layer rendah dulu (belakang), layer tinggi di atas
-            val sorted = group.sortedBy { it.layer }
-
-            for (card in sorted) {
-                val view = layoutInflater.inflate(R.layout.item_card, boardContainer, false)
-                val tv = view.findViewById<TextView>(R.id.cardText)
-                renderCardFace(tv, card)
-
-                val lp = FrameLayout.LayoutParams(baseSize.toInt(), baseSize.toInt())
-                // Offset tumpukan: makin tinggi layer, makin tergeser
-                val offset = card.layer * 10
-                lp.leftMargin = (col * cellW + padding + offset).toInt()
-                lp.topMargin = (row * cellH + padding + offset).toInt()
-                view.layoutParams = lp
-                view.rotation = card.rotation
-                view.elevation = card.layer * 8f
-                view.alpha = if (card.locked) 0.65f else 1f
-
-                if (!card.locked) {
-                    view.setOnClickListener { onCardClick(card) }
-                }
-                cardViews[card.id] = view
-                boardContainer.addView(view)
+            val lp = FrameLayout.LayoutParams(cardSize, cardSize)
+            // Konversi posisi float (0..1) ke pixel absolut
+            lp.leftMargin = (card.xPosition * (boardW - cardSize)).toInt()
+            lp.topMargin = (card.yPosition * (boardH - cardSize)).toInt()
+            
+            view.layoutParams = lp
+            view.rotation = card.rotation
+            view.elevation = card.layer * 4f // Makin tinggi layer, makin naik bayangannya
+            
+            // Efek visual untuk kartu yang terkunci
+            view.alpha = if (card.locked) 0.7f else 1f
+            if (card.locked) {
+                view.setBackgroundColor(0x44000000) // Gelap sedikit
+            } else {
+                view.setBackgroundColor(0x00000000)
+                view.setOnClickListener { onCardClick(card) }
             }
+
+            cardViews[card.id] = view
+            boardContainer.addView(view)
         }
     }
 
@@ -179,7 +165,7 @@ class GameActivity : AppCompatActivity() {
             card.locked -> {
                 tv.text = "🔒"
                 tv.setBackgroundResource(R.drawable.bg_card_locked)
-                tv.alpha = 0.65f
+                tv.alpha = 0.8f
             }
             card.flipped || card.matched -> {
                 tv.text = card.emoji
@@ -198,39 +184,27 @@ class GameActivity : AppCompatActivity() {
         if (isProcessing) return
         val idx = engine.cards.indexOfFirst { it.id == card.id }
         val flippedCard = engine.flip(idx) ?: return
-        sound.click()
         speech.speak(EmojiData.all.firstOrNull { it.emoji == flippedCard.emoji }?.name ?: "")
 
         val view = cardViews[card.id] ?: return
-        val tv = view.findViewById<TextView>(R.id.cardText)
-        renderCardFace(tv, engine.cards[idx])
+        
+        // Animasi balik
+        ObjectAnimator.ofFloat(view, "rotationY", 0f, 180f).setDuration(200).start()
+        
+        handler.postDelayed({
+            val tv = view.findViewById<TextView>(R.id.cardText)
+            renderCardFace(tv, engine.cards[idx])
+        }, 100)
 
         if (engine.flipped.size == 2) {
             isProcessing = true
-            handler.postDelayed({ checkMatch() }, 700)
+            handler.postDelayed({ checkMatch() }, 800)
         }
     }
 
     private fun checkMatch() {
         val (isMatch, emoji) = engine.checkMatch()
-        refreshBoard()
-        if (isMatch && emoji != null) {
-            sound.match()
-            updatePairsLeft()
-            speech.speak("Cocok!")
-            showAiFact(emoji)
-            if (engine.isWin()) {
-                timerRunning = false
-                handler.removeCallbacks(timerRunnable)
-                handler.postDelayed({ winLevel() }, 600)
-            }
-        } else {
-            speech.speak("Belum cocok")
-        }
-        isProcessing = false
-    }
-
-    private fun refreshBoard() {
+        
         for ((id, view) in cardViews) {
             val card = engine.cards.firstOrNull { it.id == id }
             if (card == null || card.matched) {
@@ -245,54 +219,27 @@ class GameActivity : AppCompatActivity() {
                 view.alpha = 1f
             } else {
                 view.setOnClickListener(null)
-                view.alpha = 0.65f
+                view.alpha = 0.7f
             }
         }
-    }
 
-    private fun showAiFact(emoji: String) {
-        aiBox.visibility = View.VISIBLE
-        if (mode == "online") {
-            val key = pickApiKey()
-            if (key.isNullOrBlank()) {
-                aiBox.text = "🤖 ${EmojiData.factOf(emoji)}"
-                speech.speak("Fakta: ${EmojiData.factOf(emoji)}")
-                return
+        if (isMatch && emoji != null) {
+            updatePairsLeft()
+            speech.speak("Cocok!")
+            if (engine.isWin()) {
+                handler.postDelayed({ winLevel() }, 600)
             }
-            aiBox.text = "🤖 Mencari fakta tentang $emoji..."
-            GeminiApi.fetchFact(key, emoji) { fact ->
-                runOnUiThread {
-                    val result = fact ?: EmojiData.factOf(emoji)
-                    aiBox.text = "🤖 $result"
-                    speech.speak("Fakta: $result")
-                }
-            }
-        } else {
-            val fact = EmojiData.factOf(emoji)
-            aiBox.text = "💡 $fact"
-            speech.speak(fact)
         }
-        aiBox.animate().translationY(0f).alpha(1f).setDuration(250)
-            .setInterpolator(OvershootInterpolator()).start()
-    }
-
-    private fun pickApiKey(): String? {
-        for (i in 1..4) {
-            val k = prefs.getString("api$i", "").orEmpty()
-            if (k.isNotBlank()) return k
-        }
-        return null
+        isProcessing = false
     }
 
     private fun winLevel() {
-        sound.win()
         if (currentLevel >= maxLevel) {
             maxLevel = currentLevel + 1
             prefs.edit().putInt("maxLevel", maxLevel).apply()
         }
         val view = layoutInflater.inflate(R.layout.dialog_win, null)
-        view.findViewById<TextView>(R.id.winText).text =
-            getString(R.string.win_text, currentLevel)
+        view.findViewById<TextView>(R.id.winText).text = "Hebat! Kamu menyelesaikan Level $currentLevel."
         val dlg = AlertDialog.Builder(this).setView(view).setCancelable(false).create()
         view.findViewById<Button>(R.id.btnNextLevel).setOnClickListener {
             dlg.dismiss()
@@ -302,14 +249,12 @@ class GameActivity : AppCompatActivity() {
             dlg.dismiss(); finish()
         }
         dlg.show()
-        speech.speak("Selamat! Level $currentLevel selesai.")
+        speech.speak("Selamat! Level selesai.")
     }
 
     private fun showGameOver() {
-        sound.error()
         val view = layoutInflater.inflate(R.layout.dialog_gameover, null)
-        view.findViewById<TextView>(R.id.goText).text =
-            "Kamu kehabisan waktu di Level $currentLevel.\nSisa pasangan: ${engine.remainingPairs()}"
+        view.findViewById<TextView>(R.id.goText).text = "Waktu habis di Level $currentLevel."
         val dlg = AlertDialog.Builder(this).setView(view).setCancelable(false).create()
         view.findViewById<Button>(R.id.btnRetry).setOnClickListener {
             dlg.dismiss()
@@ -322,40 +267,9 @@ class GameActivity : AppCompatActivity() {
         speech.speak("Waktu habis. Coba lagi.")
     }
 
-    private fun prevLevel() {
-        if (currentLevel > 1) loadLevel(currentLevel - 1)
-    }
-
-    private fun nextLevel() {
-        if (currentLevel < maxLevel) loadLevel(currentLevel + 1)
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && cardViews.isEmpty()) {
-            renderBoard(LevelConfigs.forLevel(currentLevel))
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        timerRunning = false
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // hanya lanjut jika timer masih punya waktu dan level >= 10
-        val cfg = LevelConfigs.forLevel(currentLevel)
-        if (cfg.timeLimitSec > 0 && timeLeft > 0 && engine.cards.isNotEmpty() && !engine.isWin()) {
-            timerRunning = true
-            handler.postDelayed(timerRunnable, 1000)
-        }
-    }
-
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         speech.shutdown()
-        sound.release()
         super.onDestroy()
     }
 }
