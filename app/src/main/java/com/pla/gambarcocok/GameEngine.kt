@@ -24,25 +24,66 @@ class GameEngine(private val config: LevelConfig) {
 
         raw.shuffle(Random(System.currentTimeMillis() + 1))
 
-        // Assign grid positions
-        val cols = config.cols
-        val total = raw.size
-        raw.forEachIndexed { i, c ->
-            val col = i % cols
-            val row = i / cols
-            val layer = when {
-                config.layers == 1 -> 0
-                config.layers == 2 -> if (i % 2 == 0) 1 else 0
-                else -> when {
-                    i % 4 == 0 -> 2
-                    i % 4 == 1 -> 1
-                    else -> 0
-                }
+        val totalCells = config.cols * config.rows
+        val totalCards = raw.size
+
+        // Tentukan berapa sel yang kosong (single) dan berapa sel yang diisi 2-3 kartu (stacked)
+        val stacked = config.stackedCount.coerceAtMost(totalCards / 2)
+
+        // Buat daftar slot: setiap slot punya cellKey dan layer
+        data class Slot(val cell: Int, val layer: Int)
+        val slots = mutableListOf<Slot>()
+        val cellFill = IntArray(totalCells) { 0 } // jumlah kartu per cell
+
+        // Isi dulu 1 kartu per sel (sebanyak mungkin)
+        val cellsOrder = (0 until totalCells).shuffled(Random(System.currentTimeMillis() + 2))
+        var remaining = totalCards
+        for (cell in cellsOrder) {
+            if (remaining <= 0) break
+            slots.add(Slot(cell, 0))
+            cellFill[cell] = 1
+            remaining--
+        }
+
+        // Tambahkan kartu stacked di sel yang sudah ada isinya
+        var stackedLeft = stacked
+        for (cell in cellsOrder) {
+            if (stackedLeft <= 0) break
+            if (cellFill[cell] == 0) continue
+            val maxLayerHere = if (config.layers >= 3) 2 else 1
+            var layer = cellFill[cell]
+            while (layer <= maxLayerHere && stackedLeft > 0 && remaining > 0) {
+                slots.add(Slot(cell, layer))
+                cellFill[cell]++
+                layer++
+                stackedLeft--
+                remaining--
             }
-            val rotation = if (config.useRotation) {
-                (Random.nextFloat() * 24f - 12f)
-            } else 0f
-            raw[i] = c.copy(col = col, row = row, layer = layer, rotation = rotation)
+        }
+
+        // Jika masih ada sisa kartu (slot tidak cukup), tambah ke sel baru
+        while (remaining > 0) {
+            for (cell in cellsOrder) {
+                if (remaining <= 0) break
+                slots.add(Slot(cell, cellFill[cell]))
+                cellFill[cell]++
+                remaining--
+            }
+        }
+
+        // Pastikan jumlah slot = jumlah kartu
+        while (slots.size < totalCards) {
+            val cell = cellsOrder.random()
+            slots.add(Slot(cell, cellFill[cell]))
+            cellFill[cell]++
+        }
+        val finalSlots = slots.take(totalCards)
+
+        // Assign slot ke kartu
+        for (i in raw.indices) {
+            val s = finalSlots[i]
+            val rot = if (config.useRotation) (Random.nextFloat() * 20f - 10f) else 0f
+            raw[i] = raw[i].copy(cellKey = s.cell, layer = s.layer, rotation = rot)
         }
 
         cards.addAll(raw)
@@ -50,8 +91,7 @@ class GameEngine(private val config: LevelConfig) {
     }
 
     fun recomputeLocks() {
-        // Kartu terkunci jika ada kartu lain (belum matched) di posisi (col,row) sama
-        // dengan layer lebih tinggi.
+        // Kartu terkunci jika ada kartu lain (belum matched) di cellKey sama dengan layer lebih tinggi
         for (i in cards.indices) {
             val c = cards[i]
             if (c.matched) continue
@@ -60,7 +100,7 @@ class GameEngine(private val config: LevelConfig) {
                 if (i == j) continue
                 val o = cards[j]
                 if (o.matched) continue
-                if (o.col == c.col && o.row == c.row && o.layer > maxLayerHere) {
+                if (o.cellKey == c.cellKey && o.layer > maxLayerHere) {
                     maxLayerHere = o.layer
                 }
             }
