@@ -21,69 +21,35 @@ class GameEngine(private val config: LevelConfig) {
             raw.add(Card(emoji = fact.emoji, id = "a_${fact.emoji}_$idx"))
             raw.add(Card(emoji = fact.emoji, id = "b_${fact.emoji}_$idx"))
         }
-
         raw.shuffle(Random(System.currentTimeMillis() + 1))
 
-        val totalCells = config.cols * config.rows
         val totalCards = raw.size
+        
+        // KITA AKAN MEMBUAT POSISI ACAK (TUMPUKAN BEBAS)
+        // Kita bayangkan ini seperti meja. Kita buat titik-titik koordinat.
+        val random = Random(System.currentTimeMillis())
+        
+        // Tentukan titik tengah sebagai pusat tumpukan
+        val centerX = 0.5f
+        val centerY = 0.5f
 
-        // Tentukan berapa sel yang kosong (single) dan berapa sel yang diisi 2-3 kartu (stacked)
-        val stacked = config.stackedCount.coerceAtMost(totalCards / 2)
+        raw.forEachIndexed { i, card ->
+            // Posisi acak di sekitar tengah (X dan Y), dengan sebaran yang bikin tumpang tindih
+            val rx = centerX + (random.nextFloat() - 0.5f) * 0.6f
+            val ry = centerY + (random.nextFloat() - 0.5f) * 0.6f
+            
+            // Rotasi acak biar berantakan
+            val rot = if (config.useRotation) (random.nextFloat() * 30f - 15f) else 0f
+            
+            // Urutan Z (layer) dari bawah ke atas (0 sampai totalCards)
+            val layer = i
 
-        // Buat daftar slot: setiap slot punya cellKey dan layer
-        data class Slot(val cell: Int, val layer: Int)
-        val slots = mutableListOf<Slot>()
-        val cellFill = IntArray(totalCells) { 0 } // jumlah kartu per cell
-
-        // Isi dulu 1 kartu per sel (sebanyak mungkin)
-        val cellsOrder = (0 until totalCells).shuffled(Random(System.currentTimeMillis() + 2))
-        var remaining = totalCards
-        for (cell in cellsOrder) {
-            if (remaining <= 0) break
-            slots.add(Slot(cell, 0))
-            cellFill[cell] = 1
-            remaining--
-        }
-
-        // Tambahkan kartu stacked di sel yang sudah ada isinya
-        var stackedLeft = stacked
-        for (cell in cellsOrder) {
-            if (stackedLeft <= 0) break
-            if (cellFill[cell] == 0) continue
-            val maxLayerHere = if (config.layers >= 3) 2 else 1
-            var layer = cellFill[cell]
-            while (layer <= maxLayerHere && stackedLeft > 0 && remaining > 0) {
-                slots.add(Slot(cell, layer))
-                cellFill[cell]++
-                layer++
-                stackedLeft--
-                remaining--
-            }
-        }
-
-        // Jika masih ada sisa kartu (slot tidak cukup), tambah ke sel baru
-        while (remaining > 0) {
-            for (cell in cellsOrder) {
-                if (remaining <= 0) break
-                slots.add(Slot(cell, cellFill[cell]))
-                cellFill[cell]++
-                remaining--
-            }
-        }
-
-        // Pastikan jumlah slot = jumlah kartu
-        while (slots.size < totalCards) {
-            val cell = cellsOrder.random()
-            slots.add(Slot(cell, cellFill[cell]))
-            cellFill[cell]++
-        }
-        val finalSlots = slots.take(totalCards)
-
-        // Assign slot ke kartu
-        for (i in raw.indices) {
-            val s = finalSlots[i]
-            val rot = if (config.useRotation) (Random.nextFloat() * 20f - 10f) else 0f
-            raw[i] = raw[i].copy(cellKey = s.cell, layer = s.layer, rotation = rot)
+            raw[i] = card.copy(
+                xPosition = rx,  // Posisi X (0.0 - 1.0)
+                yPosition = ry,  // Posisi Y (0.0 - 1.0)
+                layer = layer,
+                rotation = rot
+            )
         }
 
         cards.addAll(raw)
@@ -91,20 +57,35 @@ class GameEngine(private val config: LevelConfig) {
     }
 
     fun recomputeLocks() {
-        // Kartu terkunci jika ada kartu lain (belum matched) di cellKey sama dengan layer lebih tinggi
+        // Logika kunci: 
+        // Kartu A terkunci jika ada Kartu B yang posisinya menimpa Kartu A
+        // DAN layer Kartu B lebih tinggi dari layer Kartu A.
+        
         for (i in cards.indices) {
             val c = cards[i]
             if (c.matched) continue
-            var maxLayerHere = c.layer
+            
+            var isLocked = false
+            
             for (j in cards.indices) {
                 if (i == j) continue
                 val o = cards[j]
                 if (o.matched) continue
-                if (o.cellKey == c.cellKey && o.layer > maxLayerHere) {
-                    maxLayerHere = o.layer
+                
+                // Jika o lebih tinggi layernya
+                if (o.layer > c.layer) {
+                    // Cek apakah posisinya bertumpukan (jarak < 0.15f)
+                    val dx = o.xPosition - c.xPosition
+                    val dy = o.yPosition - c.yPosition
+                    val distance = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                    
+                    if (distance < 0.15f) {
+                        isLocked = true
+                        break
+                    }
                 }
             }
-            cards[i] = c.copy(locked = c.layer < maxLayerHere)
+            cards[i] = c.copy(locked = isLocked)
         }
     }
 
