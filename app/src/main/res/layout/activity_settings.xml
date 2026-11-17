@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_panel"
+            android:text="@string/back"
+            android:textColor="@color/text"
+            android:textSize="13sp"
+            android:stateListAnimator="@null"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="⚙️ Pengaturan AI"
+            android:textColor="@color/text"
+            android:textSize="22sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="20dp"
+            android:text="@string/api_hint"
+            android:textColor="@color/text_soft"
+            android:textSize="13sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/api1"
+            android:textColor="@color/text"
+            android:textSize="13sp"/>
+        <EditText
+            android:id="@+id/etApi1"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="14dp"
+            android:hint="AIza..."
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_soft"
+            android:textSize="13sp"
+            android:inputType="textVisiblePassword"
+            android:importantForAutofill="no"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/api2"
+            android:textColor="@color/text"
+            android:textSize="13sp"/>
+        <EditText
+            android:id="@+id/etApi2"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="14dp"
+            android:hint="AIza..."
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_soft"
+            android:textSize="13sp"
+            android:inputType="textVisiblePassword"
+            android:importantForAutofill="no"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/api3"
+            android:textColor="@color/text"
+            android:textSize="13sp"/>
+        <EditText
+            android:id="@+id/etApi3"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="14dp"
+            android:hint="AIza..."
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_soft"
+            android:textSize="13sp"
+            android:inputType="textVisiblePassword"
+            android:importantForAutofill="no"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/api4"
+            android:textColor="@color/text"
+            android:textSize="13sp"/>
+        <EditText
+            android:id="@+id/etApi4"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="14dp"
+            android:hint="AIza..."
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_soft"
+            android:textSize="13sp"
+            android:inputType="textVisiblePassword"
+            android:importantForAutofill="no"/>
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_btn_success"
+            android:text="@string/save"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:stateListAnimator="@null"/>
+
+        <TextView
+            android:id="@+id/txtSaved"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:textColor="@color/success"
+            android:textSize="13sp"
+            android:visibility="gone"/>
+    </LinearLayout>
+</ScrollView>
